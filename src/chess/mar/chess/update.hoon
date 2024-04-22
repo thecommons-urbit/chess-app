@@ -45,7 +45,8 @@
         %-  pairs:enjs
         :~  ['chessUpdate' [%s 'position']]
             ['gameID' [%s (scot %da game-id.upd)]]
-            ['specialDrawAvailable' [%b special-draw-available.upd]]
+            ['threefoldDrawAvailable' [%b threefold-draw-available.upd]]
+            ['fiftyMoveDrawAvailable' [%b fifty-move-draw-available.upd]]
         ::
             :-  'move'
             %-  pairs:enjs
