@@ -620,7 +620,22 @@
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
             ::  put our new game into the map of games
-            games  (~(put by games) game-id.action [new-game *chess-position *(map @t @ud) | | | | | | src.bowl practice-game.u.challenge])
+            games  %-  %~  put  by
+                     games
+                   :-  game-id.action
+                   :*  new-game
+                       *chess-position
+                       *(map @t @ud)
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       src.bowl
+                       practice-game.u.challenge
+                   ==
           ==
         %draw-offered
           =/  game-state
@@ -1305,8 +1320,22 @@
             ::  remove our challenger from challenges-received
             challenges-received  (~(del by challenges-received) src.bowl)
             ::  put our new game into the map of games
-            games  (~(put by games) game-id [new-game *chess-position *(map @t @ud) | | | | | | src.bowl practice-game.challenge])
-          ==
+            games  %-  %~  put  by
+                     games
+                   :-  game-id
+                   :*  new-game
+                       *chess-position
+                       *(map @t @ud)
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       %.n
+                       src.bowl
+                       practice-game.challenge
+          ==       ==
         ::  if nacked, print error
         %-  (slog u.p.sign)
         [~ this]
@@ -1586,20 +1615,27 @@
         new-fen-repetition
         threefold-draw-available
         fifty-move-draw-available
-        |4.game-state
+        auto-claim-special-draws.game-state
+        sent-draw-offer.game-state
+        got-draw-offer.game-state
+        sent-undo-request.game-state
+        got-undo-request.game-state
+        opponent.game-state
+        practice-game.game-state
     ==
   :*  %give
       %fact
       ~[/game/(scot %da game-id.game.game-state)/updates]
       %chess-update
-      !>  :*  %position
-              game-id.game.game-state
-              (get-squares move player-to-move.new-position)
-              (position-to-fen new-position)
-              san
-              threefold-draw-available
-              fifty-move-draw-available
-  ==      ==
+      !>  ^-  chess-update
+      :*  %position
+          game-id.game.game-state
+          (get-squares move player-to-move.new-position)
+          (position-to-fen new-position)
+          san
+          threefold-draw-available
+          fifty-move-draw-available
+  ==  ==
 ++  increment-repetition
   |=  [fen-repetition=(map @t @ud) position=chess-position]
   ^-  (map @t @ud)
