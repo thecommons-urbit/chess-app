@@ -101,8 +101,11 @@ cp -rfL ${DEPS_DIR}/* ${INSTALL_DIR}/
 
 if [ $DOCKET -eq 1 ]; then
   cp -rfL ${RESOURCE_DIR}/* ${INSTALL_DIR}/
+  DOCKET_FILE="${INSTALL_DIR}/desk.docket-0"
 
-  echo "  glob-ames+[~$SHIP 0v0]  ==" >> "${INSTALL_DIR}/desk.docket-0"
+  echo "\n"                         >> $DOCKET_FILE
+  echo "  glob-ames+[~$SHIP 0v0]"   >> $DOCKET_FILE
+  echo "=="                         >> $DOCKET_FILE
 
   echo "~$SHIP" > "${INSTALL_DIR}/desk.ship"
 fi
