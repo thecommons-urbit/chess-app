@@ -344,6 +344,7 @@
           move=(pair @t @t)
           position=@t
           san=@t
-          special-draw-available=?
+          threefold-draw-available=?
+          fifty-move-draw-available=?
   ==  ==
 --
