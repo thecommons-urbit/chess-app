@@ -13,19 +13,6 @@
   $%  state-0
       state-1
   ==
-+$  active-game-state
-  $:  game=chess-game
-      position=chess-position
-      fen-repetition=(map @t @ud)
-      special-draw-available=?
-      auto-claim-special-draws=?
-      sent-draw-offer=?
-      got-draw-offer=?
-      sent-undo-request=?
-      got-undo-request=?
-      opponent=ship
-      practice-game=?
-  ==
 +$  state-1
   $:  %1
       games=(map game-id active-game-state)
@@ -309,7 +296,9 @@
             %+  poke-nack  this
             "cannot claim special draw on opponent's turn"
           ::  check if a special draw claim is available
-          ?.  special-draw-available.u.game-state
+          ?.  ?|  threefold-draw-available.u.game-state
+                  fifty-move-draw-available.u.game-state
+              ==
             %+  poke-nack  this
             "no special draw available for game {<game-id.action>}"
           ::  tell opponent we claim a special conditions draw
@@ -484,8 +473,10 @@
           ::  is the game over?
           ?~  result.game.new-game-state
             ::  special draw available?
-            ?:  ?&  special-draw-available.new-game-state
-                    auto-claim-special-draws.u.game-state
+            ?:  ?&  auto-claim-special-draws.u.game-state
+                    ?|  threefold-draw-available.new-game-state
+                        fifty-move-draw-available.new-game-state
+                    ==
                 ==
               ::  tell opponent we claim a special conditions draw
               :~  :*  %pass
@@ -615,7 +606,22 @@
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
             ::  put our new game into the map of games
-            games  (~(put by games) game-id.action [new-game *chess-position *(map @t @ud) | | | | | | src.bowl practice-game.u.challenge])
+            games  %-  %~  put  by
+                     games
+                   :-  game-id.action
+                   :*  new-game
+                       position:*active-game-state
+                       fen-repetition:*active-game-state
+                       threefold-draw-available:*active-game-state
+                       fifty-move-draw-available:*active-game-state
+                       auto-claim-special-draws:*active-game-state
+                       sent-draw-offer:*active-game-state
+                       got-draw-offer:*active-game-state
+                       sent-undo-request:*active-game-state
+                       got-undo-request:*active-game-state
+                       src.bowl
+                       practice-game.u.challenge
+                   ==
           ==
         %draw-offered
           =/  game-state
@@ -846,7 +852,9 @@
               ?:  =(result.action %'½–½')
                 ::  is there an open draw offer?
                 ?:  ?|  sent-draw-offer.u.game-state
-                        special-draw-available.u.game-state
+                        ?|  threefold-draw-available.u.game-state
+                            fifty-move-draw-available.u.game-state
+                        ==
                     ==
                   (output-quip game.u.game-state(result `result.action) ~ practice-game.u.game-state)
                 %+  poke-nack  this
@@ -869,7 +877,9 @@
             ::  is opponent claiming a special draw?
             ?:  =(result.action %'½–½')
               ::  is a draw now available?
-              ?:  special-draw-available.result-game-state
+              ?:  ?|  threefold-draw-available.result-game-state
+                      fifty-move-draw-available.result-game-state
+                  ==
                 (output-quip game.result-game-state(result `result.action) (bind move-result tail) practice-game.u.game-state)
               ::  does the move result in a draw?
               ?:  ?&  ?=(^ result.game.new.u.move-result)
@@ -1153,7 +1163,8 @@
                         (get-squares move.move player)
                         fen.move
                         san.move
-                        special-draw-available.game-state
+                        threefold-draw-available.game-state
+                        fifty-move-draw-available.game-state
             ==      ==
             (opposite-side player)
       =?  cards  got-draw-offer.game-state
@@ -1295,8 +1306,22 @@
             ::  remove our challenger from challenges-received
             challenges-received  (~(del by challenges-received) src.bowl)
             ::  put our new game into the map of games
-            games  (~(put by games) game-id [new-game *chess-position *(map @t @ud) | | | | | | src.bowl practice-game.challenge])
-          ==
+            games  %-  %~  put  by
+                     games
+                   :-  game-id
+                   :*  new-game
+                       position:*active-game-state
+                       fen-repetition:*active-game-state
+                       threefold-draw-available:*active-game-state
+                       fifty-move-draw-available:*active-game-state
+                       auto-claim-special-draws:*active-game-state
+                       sent-draw-offer:*active-game-state
+                       got-draw-offer:*active-game-state
+                       sent-undo-request:*active-game-state
+                       got-undo-request:*active-game-state
+                       src.bowl
+                       practice-game.challenge
+          ==       ==
         ::  if nacked, print error
         %-  (slog u.p.sign)
         [~ this]
@@ -1541,12 +1566,16 @@
     ?:  in-checkmate
       |
     ~(in-stalemate with-position new-position)
-  =/  special-draw-available
-    ?|  (check-threefold new-fen-repetition new-position)
-        (check-50-move-rule new-position)
-    ==
+  =/  threefold-draw-available
+    (check-threefold new-fen-repetition new-position)
+  =/  fifty-move-draw-available
+    (check-50-move-rule new-position)
   =/  special-draw-claim
-    &(special-draw-available auto-claim-special-draws.game-state)
+    ?&  auto-claim-special-draws.game-state
+        ?|  threefold-draw-available
+            fifty-move-draw-available
+        ==
+    ==
   =/  result
     ^-  (unit chess-result)
     ?.  ?|  in-checkmate
@@ -1570,20 +1599,29 @@
     :*  updated-game
         new-position
         new-fen-repetition
-        special-draw-available
-        |4.game-state
+        threefold-draw-available
+        fifty-move-draw-available
+        auto-claim-special-draws.game-state
+        sent-draw-offer.game-state
+        got-draw-offer.game-state
+        sent-undo-request.game-state
+        got-undo-request.game-state
+        opponent.game-state
+        practice-game.game-state
     ==
   :*  %give
       %fact
       ~[/game/(scot %da game-id.game.game-state)/updates]
       %chess-update
-      !>  :*  %position
-              game-id.game.game-state
-              (get-squares move player-to-move.new-position)
-              (position-to-fen new-position)
-              san
-              special-draw-available
-  ==      ==
+      !>  ^-  chess-update
+      :*  %position
+          game-id.game.game-state
+          (get-squares move player-to-move.new-position)
+          (position-to-fen new-position)
+          san
+          threefold-draw-available
+          fifty-move-draw-available
+  ==  ==
 ++  increment-repetition
   |=  [fen-repetition=(map @t @ud) position=chess-position]
   ^-  (map @t @ud)
