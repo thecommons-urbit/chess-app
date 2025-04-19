@@ -610,8 +610,8 @@
                      games
                    :-  game-id.action
                    :*  new-game
-                       *chess-position
-                       *(map @t @ud)
+                       position:*active-game-state
+                       fen-repetition:*active-game-state
                        threefold-draw-available:*active-game-state
                        fifty-move-draw-available:*active-game-state
                        auto-claim-special-draws:*active-game-state
@@ -1310,8 +1310,8 @@
                      games
                    :-  game-id
                    :*  new-game
-                       *chess-position
-                       *(map @t @ud)
+                       position:*active-game-state
+                       fen-repetition:*active-game-state
                        threefold-draw-available:*active-game-state
                        fifty-move-draw-available:*active-game-state
                        auto-claim-special-draws:*active-game-state
