@@ -271,6 +271,36 @@
     moves=(list [chess-move chess-fen chess-san])
   ==
 ::
+::  ongoing chess game metadata
++$  active-game-state
+  ::  default values
+  $~  :*  game=*chess-game
+          position=*chess-position
+          fen-repetition=*(map @t @ud)
+          threefold-draw-available=%.n
+          fifty-move-draw-available=%.n
+          auto-claim-special-draws=%.n
+          sent-draw-offer=%.n
+          got-draw-offer=%.n
+          sent-undo-request=%.n
+          got-undo-request=%.n
+          opponent=*ship
+          practice-game=%.n
+      ==
+  $:  game=chess-game
+      position=chess-position
+      fen-repetition=(map @t @ud)
+      threefold-draw-available=?
+      fifty-move-draw-available=?
+      auto-claim-special-draws=?
+      sent-draw-offer=?
+      got-draw-offer=?
+      sent-undo-request=?
+      got-undo-request=?
+      opponent=ship
+      practice-game=?
+  ==
+::
 ::  message type for a game concluding: which game ended, how, and why
 +$  chess-game-result
   $:  =game-id

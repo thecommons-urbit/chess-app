@@ -13,20 +13,6 @@
   $%  state-0
       state-1
   ==
-+$  active-game-state
-  $:  game=chess-game
-      position=chess-position
-      fen-repetition=(map @t @ud)
-      threefold-draw-available=?
-      fifty-move-draw-available=?
-      auto-claim-special-draws=?
-      sent-draw-offer=?
-      got-draw-offer=?
-      sent-undo-request=?
-      got-undo-request=?
-      opponent=ship
-      practice-game=?
-  ==
 +$  state-1
   $:  %1
       games=(map game-id active-game-state)
@@ -626,13 +612,13 @@
                    :*  new-game
                        *chess-position
                        *(map @t @ud)
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
+                       threefold-draw-available:*active-game-state
+                       fifty-move-draw-available:*active-game-state
+                       auto-claim-special-draws:*active-game-state
+                       sent-draw-offer:*active-game-state
+                       got-draw-offer:*active-game-state
+                       sent-undo-request:*active-game-state
+                       got-undo-request:*active-game-state
                        src.bowl
                        practice-game.u.challenge
                    ==
@@ -1326,13 +1312,13 @@
                    :*  new-game
                        *chess-position
                        *(map @t @ud)
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
-                       %.n
+                       threefold-draw-available:*active-game-state
+                       fifty-move-draw-available:*active-game-state
+                       auto-claim-special-draws:*active-game-state
+                       sent-draw-offer:*active-game-state
+                       got-draw-offer:*active-game-state
+                       sent-undo-request:*active-game-state
+                       got-undo-request:*active-game-state
                        src.bowl
                        practice-game.challenge
           ==       ==
