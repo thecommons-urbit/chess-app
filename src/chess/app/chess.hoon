@@ -1571,10 +1571,10 @@
   =/  fifty-move-draw-available
     (check-50-move-rule new-position)
   =/  special-draw-claim
-    ?&  ?|  threefold-draw-available
+    ?&  auto-claim-special-draws.game-state
+        ?|  threefold-draw-available
             fifty-move-draw-available
         ==
-        auto-claim-special-draws.game-state
     ==
   =/  result
     ^-  (unit chess-result)
