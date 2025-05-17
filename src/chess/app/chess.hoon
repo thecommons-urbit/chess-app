@@ -525,25 +525,56 @@
           ==  ==
       ==
     ::
-    ::  pokes managing active game state and challenges sent by another chess agent
+    ::  pokes managing active game state and
+    ::  challenges sent by another chess agent
     %chess-agent-action
       =/  action  !<(chess-agent-action vase)
       ?-  -.action
         %challenge-received
-          ::  don't check for existing challenge;
-          ::  if it does it means something went wrong and we probably want to
-          ::  overwrite the existing challenge
+          ::
+          ::  don't check if challenge exists; if it
+          ::  does, it means something went wrong and we
+          ::  probably want to overwrite the existing challenge
+          ::
+          ::  check if this is a challenge from ourselves
+          ?.  =(our src):bowl
+            ::  if not, receive the challenge
+            :_
+              %=  this
+                ::  remove our challenger from challenges-received
+                challenges-received  (~(put by challenges-received) src.bowl challenge.action)
+              ==
+            ::  update observers that we replied to the challenge
+            :~  :*  %give
+                    %fact
+                    ~[/challenges]
+                    %chess-update
+                    !>([%challenge-received src.bowl challenge.action])
+            ==  ==
+          :: if so, automatically accept the challenge
           :_
             %=  this
-              ::  remove our challenger from challenges-received
               challenges-received  (~(put by challenges-received) src.bowl challenge.action)
             ==
-          ::  update observers that we replied to the challenge
-          :~  :*  %give
+          :~  :*  %pass
+                  ~
+                  %agent
+                  [our.bowl %chess]
+                  %poke
+                  %chess-user-action
+                  !>([%accept-challenge our.bowl])
+              ==
+              :*  %give
                   %fact
                   ~[/challenges]
                   %chess-update
                   !>([%challenge-received src.bowl challenge.action])
+              ==
+              :*  %give
+                  %fact
+                  ~[/challenges]
+                  %chess-update
+                  !>([%challenge-resolved src.bowl])
           ==  ==
         %challenge-declined
           :: check that challenge exists
