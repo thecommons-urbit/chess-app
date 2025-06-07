@@ -532,13 +532,12 @@
       ?-  -.action
         %challenge-received
           ::
-          ::  don't check if challenge exists; if it
-          ::  does, it means something went wrong and we
-          ::  probably want to overwrite the existing challenge
-          ::
           ::  check if this is a challenge from ourselves
           ?.  =(our src):bowl
-            ::  if not, receive the challenge
+            ::
+            ::  if not, receive the challenge and
+            ::  overwrite an existing challenge
+            ::  from this user
             :_
               %=  this
                 ::  remove our challenger from challenges-received
@@ -551,7 +550,12 @@
                     %chess-update
                     !>([%challenge-received src.bowl challenge.action])
             ==  ==
-          :: if so, automatically accept the challenge
+          ::  if so, automatically accept the challenge
+          ::  unless we have an active game with ourselves
+          ?.  %-  ~(any by games)
+              |=  =active-game-state
+              =(our.bowl opponent.active-game-state)
+            `this
           :_
             %=  this
               challenges-received  (~(put by challenges-received) src.bowl challenge.action)
