@@ -540,10 +540,10 @@
             ::  from this user
             :_
               %=  this
-                ::  remove our challenger from challenges-received
+                ::  overwrite existing challenge
                 challenges-received  (~(put by challenges-received) src.bowl challenge.action)
               ==
-            ::  update observers that we replied to the challenge
+            ::  update subscribers that we received the challenge
             :~  :*  %give
                     %fact
                     ~[/challenges]
