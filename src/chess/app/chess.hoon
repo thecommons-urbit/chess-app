@@ -59,8 +59,10 @@
       ?-  -.action
         ::  manage new outgoing challenges
         %send-challenge
-          ::  only allow one active challenge per ship
-          ?:  (~(has by challenges-sent) who.action)
+          ::  don't allow multiple outgoing challenges to another ship
+          ?:  ?&  !=(our.bowl who.action)
+                  (~(has by challenges-sent) who.action)
+              ==
             %+  poke-nack  this
             "already challenged {<who.action>}"
           :_
@@ -552,14 +554,17 @@
             ==  ==
           ::  if so, automatically accept the challenge
           ::  unless we have an active game with ourselves
-          ?.  %-  ~(any by games)
+          ?:  %-  ~(any by games)
               |=  =active-game-state
               =(our.bowl opponent.active-game-state)
             `this
-          :_
-            %=  this
-              challenges-received  (~(put by challenges-received) src.bowl challenge.action)
-            ==
+          ?.  practice-game.challenge.action
+            %+  poke-nack  this
+            "not a practice challenge"
+          ::  do minimum-viable bookkeeping
+          :_  %=  this
+                  challenges-received  (~(put by challenges-received) our.bowl challenge.action)
+              ==
           :~  :*  %pass
                   ~
                   %agent
@@ -567,18 +572,6 @@
                   %poke
                   %chess-user-action
                   !>([%accept-challenge our.bowl])
-              ==
-              :*  %give
-                  %fact
-                  ~[/challenges]
-                  %chess-update
-                  !>([%challenge-received src.bowl challenge.action])
-              ==
-              :*  %give
-                  %fact
-                  ~[/challenges]
-                  %chess-update
-                  !>([%challenge-resolved src.bowl])
           ==  ==
         %challenge-declined
           :: check that challenge exists
@@ -1338,7 +1331,7 @@
                 ==
             ==
           %=  this
-            ::  remove our challenger from challenges-received
+            ::  remove the challenge
             challenges-received  (~(del by challenges-received) src.bowl)
             ::  put our new game into the map of games
             games  %-  %~  put  by
