@@ -806,7 +806,12 @@
             "{<our.bowl>} did not send undo request for game {<game-id.action>}"
           =/  ship-to-move
             (ship-to-move u.game-state)
+          ::  in self-games, only remove one move regardless of whose turn it is
+          =/  is-self-game
+            =(white.game black.game)
           =/  updated-moves
+            ?:  is-self-game
+              (snip moves.game)
             ?:  =(ship-to-move our.bowl)
               (snip (snip moves.game))
             (snip moves.game)
@@ -817,6 +822,8 @@
               position.u.game-state
             ?~  updated-moves
               *chess-position
+            ?:  is-self-game
+              (fen-to-position (head (tail (rear (snip moves.game)))))
             ?:  =(ship-to-move our.bowl)
               (fen-to-position (head (tail (rear (snip (snip moves.game))))))
             (fen-to-position (head (tail (rear (snip moves.game)))))
@@ -833,7 +840,7 @@
                   %fact
                   ~[/game/(scot %da game-id.action)/updates]
                   %chess-update
-                  !>([%undo-accepted game-id.action (position-to-fen position.u.game-state) ?:(=(ship-to-move our.bowl) ~.2 ~.1)])
+                  !>([%undo-accepted game-id.action (position-to-fen position.u.game-state) ?:(is-self-game ~.1 ?:(=(ship-to-move our.bowl) ~.2 ~.1))])
           ==  ==
         %receive-move
           ::  XX: opponent's move means draw declined
@@ -1411,21 +1418,24 @@
           =*  game  game.game-state
           =/  ship-to-move
             (ship-to-move game-state)
+          ::  in self-games, only remove one move regardless of whose turn it is
+          =/  is-self-game
+            =(white.game black.game)
           =/  updated-moves
+            ?:  is-self-game
+              (snip moves.game)
             ?:  =(ship-to-move our.bowl)
               (snip moves.game)
             (snip (snip moves.game))
           =:
-              moves.game
-            ?:  =(ship-to-move our.bowl)
-              (snip moves.game)
-            (snip (snip moves.game))
               moves.game
             updated-moves
           ::
               position.game-state
             ?~  updated-moves
               *chess-position
+            ?:  is-self-game
+              (fen-to-position (head (tail (rear (snip moves.game)))))
             ?:  =(ship-to-move our.bowl)
               (fen-to-position (head (tail (rear (snip moves.game)))))
             (fen-to-position (head (tail (rear (snip (snip moves.game))))))
@@ -1442,7 +1452,7 @@
                   %fact
                   ~[/game/(scot %da game-id)/updates]
                   %chess-update
-                  !>([%accepted-undo game-id (position-to-fen position.game-state) ?:(=(ship-to-move our.bowl) ~.1 ~.2)])
+                  !>([%accepted-undo game-id (position-to-fen position.game-state) ?:(is-self-game ~.1 ?:(=(ship-to-move our.bowl) ~.1 ~.2))])
           ==  ==
         ::  if nacked, print error
         ::  XX: maybe move this into %accept-undo?
