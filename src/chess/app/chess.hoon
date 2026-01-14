@@ -59,8 +59,10 @@
       ?-  -.action
         ::  manage new outgoing challenges
         %send-challenge
-          ::  only allow one active challenge per ship
-          ?:  (~(has by challenges-sent) who.action)
+          ::  don't allow multiple outgoing challenges to another ship
+          ?:  ?&  !=(our.bowl who.action)
+                  (~(has by challenges-sent) who.action)
+              ==
             %+  poke-nack  this
             "already challenged {<who.action>}"
           :_
@@ -525,25 +527,51 @@
           ==  ==
       ==
     ::
-    ::  pokes managing active game state and challenges sent by another chess agent
+    ::  pokes managing active game state and
+    ::  challenges sent by another chess agent
     %chess-agent-action
       =/  action  !<(chess-agent-action vase)
       ?-  -.action
         %challenge-received
-          ::  don't check for existing challenge;
-          ::  if it does it means something went wrong and we probably want to
-          ::  overwrite the existing challenge
-          :_
-            %=  this
-              ::  remove our challenger from challenges-received
-              challenges-received  (~(put by challenges-received) src.bowl challenge.action)
-            ==
-          ::  update observers that we replied to the challenge
-          :~  :*  %give
-                  %fact
-                  ~[/challenges]
-                  %chess-update
-                  !>([%challenge-received src.bowl challenge.action])
+          ::
+          ::  check if this is a challenge from ourselves
+          ?.  =(our src):bowl
+            ::
+            ::  if not, receive the challenge and
+            ::  overwrite an existing challenge
+            ::  from this user
+            :_
+              %=  this
+                ::  overwrite existing challenge
+                challenges-received  (~(put by challenges-received) src.bowl challenge.action)
+              ==
+            ::  update subscribers that we received the challenge
+            :~  :*  %give
+                    %fact
+                    ~[/challenges]
+                    %chess-update
+                    !>([%challenge-received src.bowl challenge.action])
+            ==  ==
+          ::  if so, automatically accept the challenge
+          ::  unless we have an active game with ourselves
+          ?:  %-  ~(any by games)
+              |=  =active-game-state
+              =(our.bowl opponent.active-game-state)
+            `this
+          ?.  practice-game.challenge.action
+            %+  poke-nack  this
+            "not a practice challenge"
+          ::  do minimum-viable bookkeeping
+          :_  %=  this
+                  challenges-received  (~(put by challenges-received) our.bowl challenge.action)
+              ==
+          :~  :*  %pass
+                  ~
+                  %agent
+                  [our.bowl %chess]
+                  %poke
+                  %chess-user-action
+                  !>([%accept-challenge our.bowl])
           ==  ==
         %challenge-declined
           :: check that challenge exists
@@ -778,7 +806,12 @@
             "{<our.bowl>} did not send undo request for game {<game-id.action>}"
           =/  ship-to-move
             (ship-to-move u.game-state)
+          ::  in self-games, only remove one move regardless of whose turn it is
+          =/  is-self-game
+            =(white.game black.game)
           =/  updated-moves
+            ?:  is-self-game
+              (snip moves.game)
             ?:  =(ship-to-move our.bowl)
               (snip (snip moves.game))
             (snip moves.game)
@@ -789,6 +822,8 @@
               position.u.game-state
             ?~  updated-moves
               *chess-position
+            ?:  is-self-game
+              (fen-to-position (head (tail (rear (snip moves.game)))))
             ?:  =(ship-to-move our.bowl)
               (fen-to-position (head (tail (rear (snip (snip moves.game))))))
             (fen-to-position (head (tail (rear (snip moves.game)))))
@@ -805,7 +840,7 @@
                   %fact
                   ~[/game/(scot %da game-id.action)/updates]
                   %chess-update
-                  !>([%undo-accepted game-id.action (position-to-fen position.u.game-state) ?:(=(ship-to-move our.bowl) ~.2 ~.1)])
+                  !>([%undo-accepted game-id.action (position-to-fen position.u.game-state) ?:(is-self-game ~.1 ?:(=(ship-to-move our.bowl) ~.2 ~.1))])
           ==  ==
         %receive-move
           ::  XX: opponent's move means draw declined
@@ -1303,7 +1338,7 @@
                 ==
             ==
           %=  this
-            ::  remove our challenger from challenges-received
+            ::  remove the challenge
             challenges-received  (~(del by challenges-received) src.bowl)
             ::  put our new game into the map of games
             games  %-  %~  put  by
@@ -1383,21 +1418,24 @@
           =*  game  game.game-state
           =/  ship-to-move
             (ship-to-move game-state)
+          ::  in self-games, only remove one move regardless of whose turn it is
+          =/  is-self-game
+            =(white.game black.game)
           =/  updated-moves
+            ?:  is-self-game
+              (snip moves.game)
             ?:  =(ship-to-move our.bowl)
               (snip moves.game)
             (snip (snip moves.game))
           =:
-              moves.game
-            ?:  =(ship-to-move our.bowl)
-              (snip moves.game)
-            (snip (snip moves.game))
               moves.game
             updated-moves
           ::
               position.game-state
             ?~  updated-moves
               *chess-position
+            ?:  is-self-game
+              (fen-to-position (head (tail (rear (snip moves.game)))))
             ?:  =(ship-to-move our.bowl)
               (fen-to-position (head (tail (rear (snip moves.game)))))
             (fen-to-position (head (tail (rear (snip (snip moves.game))))))
@@ -1414,7 +1452,7 @@
                   %fact
                   ~[/game/(scot %da game-id)/updates]
                   %chess-update
-                  !>([%accepted-undo game-id (position-to-fen position.game-state) ?:(=(ship-to-move our.bowl) ~.1 ~.2)])
+                  !>([%accepted-undo game-id (position-to-fen position.game-state) ?:(is-self-game ~.1 ?:(=(ship-to-move our.bowl) ~.1 ~.2))])
           ==  ==
         ::  if nacked, print error
         ::  XX: maybe move this into %accept-undo?
