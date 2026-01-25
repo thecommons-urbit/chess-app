@@ -4,7 +4,7 @@
 ::  XX: need frontend notifications for attempting to challenge user more than once
 ::
 ::  import libraries and expose namespace
-/-  *historic
+/-  *historic, hark
 /+  *chess, dbug, default-agent, pals
 ::
 ::  define state structures
@@ -546,12 +546,22 @@
                 challenges-received  (~(put by challenges-received) src.bowl challenge.action)
               ==
             ::  update subscribers that we received the challenge
-            :~  :*  %give
+            :-  :*  %give
                     %fact
                     ~[/challenges]
                     %chess-update
                     !>([%challenge-received src.bowl challenge.action])
-            ==  ==
+                ==
+            %-  drop
+            %-  send-hark
+            :*  src.bowl
+                %challenge
+                ?:  practice-game.challenge.action
+                  ' has challenged you to a practice game'
+                ' has challenged you'
+                bowl
+                ~
+            ==
           ::  if so, automatically accept the challenge
           ::  unless we have an active game with ourselves
           ?:  %-  ~(any by games)
@@ -578,14 +588,22 @@
           ?.  (~(has by challenges-sent) src.bowl)
             %+  poke-nack  this
             "{<our.bowl>} hasn't challenged you"
-          :-
-            ::  tell frontend our challenge was declined
-            :~  :*  %give
-                    %fact
-                    ~[/challenges]
-                    %chess-update
-                    !>([%challenge-resolved src.bowl])
-            ==  ==
+          :-  ;:  welp
+                  :~  :*  %give
+                          %fact
+                          ~[/challenges]
+                          %chess-update
+                          !>([%challenge-resolved src.bowl])
+                  ==  ==
+                  %-  drop
+                  %-  send-hark
+                  :*  src.bowl
+                      %challenge
+                      ' has declined your challenge'
+                      bowl
+                      ~
+                  ==
+              ==
           %=  this
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
@@ -615,21 +633,33 @@
                 ~
                 ~
             ==
-          :-
-            ::  add our new game to the list of active games
-            :~  :*  %give
-                    %fact
-                    ~[/active-games]
-                    %chess-game-active
-                    !>(new-game)
-                ==
-                ::  tell our frontend our challenge was accepted
-                :*  %give
-                    %fact
-                    ~[/challenges]
-                    %chess-update
-                    !>([%challenge-resolved src.bowl])
-            ==  ==
+          :-  ;:  welp
+                  ::  add our new game to the list of active games
+                  :~  :*  %give
+                          %fact
+                          ~[/active-games]
+                          %chess-game-active
+                          !>(new-game)
+                  ==  ==
+                  ::  tell subscribers our challenge was accepted
+                  :~  :*  %give
+                          %fact
+                          ~[/challenges]
+                          %chess-update
+                          !>([%challenge-resolved src.bowl])
+                  ==  ==
+                  ::  send challenge accepted notification
+                  %-  drop
+                  %-  send-hark
+                  :*  src.bowl
+                      %challenge
+                      ?:  =(our.bowl white-player)
+                        ' has accepted your challenge - your move!'
+                      ' has accepted your challenge'
+                      bowl
+                      `game-id.action
+                  ==
+              ==
           %=  this
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
@@ -658,13 +688,20 @@
           ?~  game-state
             %+  poke-nack  this
             "no active game with id {<game-id.action>}"
-          :-
-            :~  :*  %give
-                    %fact
-                    ~[/game/(scot %da game-id.action)/updates]
-                    %chess-update
-                    !>([%draw-offered game-id.action])
-            ==  ==
+          :-  :-  :*  %give
+                      %fact
+                      ~[/game/(scot %da game-id.action)/updates]
+                      %chess-update
+                      !>([%draw-offered game-id.action])
+                  ==
+              %-  drop
+              %-  send-hark
+              :*  src.bowl
+                  %request
+                  ' has offered a draw'
+                  bowl
+                  `game-id.action
+              ==
           %=  this
             games  (~(put by games) game-id.action u.game-state(got-draw-offer &))
           ==
@@ -737,13 +774,20 @@
               ==  ==
             %+  poke-nack  this
             "no move to undo for game {<game-id.action>}"
-          :-
-            :~  :*  %give
-                    %fact
-                    ~[/game/(scot %da game-id.action)/updates]
-                    %chess-update
-                    !>([%undo-requested game-id.action])
-            ==  ==
+          :-  :-  :*  %give
+                      %fact
+                      ~[/game/(scot %da game-id.action)/updates]
+                      %chess-update
+                      !>([%undo-requested game-id.action])
+                  ==
+              %-  drop
+              %-  send-hark
+              :*  src.bowl
+                  %request
+                  ' has requested to undo a move'
+                  bowl
+                  `game-id.action
+              ==
           %=  this
             games  (~(put by games) game-id.action u.game-state(got-undo-request &))
           ==
@@ -868,7 +912,25 @@
             =/  san  (~(algebraicize with-position position.u.game-state) move.action)
             %+  poke-nack  this
             "unexpected result for game {<game-id.action>} after move {<san>}"
-          :-  [card.u.move-result ~]
+          :-  :-  card.u.move-result
+              %-  drop
+              %-  send-hark
+              :*  src.bowl
+                  %move
+                  ?:  ~(in-check with-position position.new-game-state)
+                    ' has put you in check!'
+                  ?:  ?=([%castle *] move.action)
+                    ' has castled'
+                  %-  crip
+                  ;:  weld
+                      " has moved "
+                      (trip (square-to-algebraic from.move.action))
+                      " -> "
+                      (trip (square-to-algebraic to.move.action))
+                  ==
+                  bowl
+                  `game-id.action
+              ==
           %=  this
             games  (~(put by games) game-id.action new-game-state)
           ==
@@ -936,42 +998,80 @@
             "{<src.bowl>} does not win game {<game-id.action>}"
           ++  output-quip
             |=  [archived-game=chess-game move=(unit card) practice-game=?]
-            :_
-              ?:  =(& practice-game)
+            :_  ?:  =(& practice-game)
+                  %=  this
+                    ::  remove game from our map of active games
+                    games    (~(del by games) game-id.action)
+                  ==
                 %=  this
                   ::  remove game from our map of active games
                   games    (~(del by games) game-id.action)
+                  ::  add game to our archive
+                  archive  (put:arch-orm archive game-id.action archived-game)
                 ==
-              %=  this
-                ::  remove game from our map of active games
-                games    (~(del by games) game-id.action)
-                ::  add game to our archive
-                archive  (put:arch-orm archive game-id.action archived-game)
-              ==
-            %+  weld
-              ::  send move update, if any
-              (drop move)
-            ::  archive finished game
-            ^-  (list card)
-            :~  :*  %give
-                    %fact
-                    ~[/archived-games]
-                    %chess-game-archived
-                    !>(archived-game)
-                ==
-                ::  update observers with game result
-                :*  %give
-                    %fact
-                    ~[/game/(scot %da game-id.action)/updates]
-                    %chess-update
-                    !>([%result game-id.action result.action])
-                ==
-                ::  kick subscribers who are listening to this agent
-                :*  %give
-                    %kick
-                    ~[/game/(scot %da game-id.action)/updates]
+              ;:  welp
+                  ::  send move update, if any
+                  (drop move)
+                  ::  archive this game
+                  :~  :*  %give
+                          %fact
+                          ~[/archived-games]
+                          %chess-game-archived
+                          !>(archived-game)
+                  ==  ==
+                  ::  send notification
+                  ?~  move
+                    ::  no move - either resignation or draw acceptance
+                    %-  drop
+                    %-  send-hark
+                    :*  ?:  =(our.bowl white.archived-game)
+                          black.archived-game
+                        white.archived-game
+                        %result
+                        ?-  result.archived-game
+                          [~ %'½–½']    ' accepted your draw offer'
+                          [~ %'1-0']    ' has resigned'
+                          [~ %'0-1']    ' has resigned'
+                          ::  XX this should never happen
+                          ~             ' ended the game'
+                        ==
+                        bowl
+                        `game-id.archived-game
+                    ==
+                  ::  regular game ending notification (with move)
+                  ?.  =(result.archived-game ?([~ %'1-0'] [~ %'0-1'] [~ %'½–½']))
                     ~
-            ==  ==
+                  %-  drop
+                  %-  send-hark
+                  :*  ?:  =(our.bowl white.archived-game)
+                        black.archived-game
+                      white.archived-game
+                      %result
+                      ?-  result.archived-game
+                        [~ %'1-0']    ' wins'
+                        [~ %'0-1']    ' wins'
+                        [~ %'½–½']    ' draw'
+                        ::  XX this should never happen
+                        ~             ' ended the game'
+                      ==
+                      bowl
+                      `game-id.archived-game
+                  ==
+                  ::  update observers with game result
+                  :~  :*  %give
+                          %fact
+                          ~[/game/(scot %da game-id.action)/updates]
+                          %chess-update
+                          !>([%result game-id.action result.action])
+                      ==
+                      ::  kick subscribers who are listening to this agent
+                      :*  %give
+                          %kick
+                          ~[/game/(scot %da game-id.action)/updates]
+                          ~
+                      ==
+                  ==
+              ==
           --
       ==
     ::
@@ -1694,4 +1794,29 @@
   :_  this
   :~  [%give %poke-ack `~[leaf+msg]]
   ==
+::
++|  %notifications
+::
+++  send-hark
+  |=  $:  opponent=ship
+          event-type=@tas
+          msg=@t
+          =bowl:gall
+          game-id=(unit @da)
+      ==
+  ^-  (unit card)
+  ?.  .^(? %gu /(scot %p our.bowl)/hark/(scot %da now.bowl)/$)
+    ~
+  ?:  =(our.bowl opponent)
+    ~
+  =/  body=(list content:hark)  [ship+opponent msg ~]
+  =/  path-suffix=path
+    ?~  game-id
+      /[event-type]
+    /[event-type]/(scot %da u.game-id)
+  =/  =rope:hark  [~ ~ q.byk.bowl (weld /(scot %p opponent) path-suffix)]
+  =/  =id:hark  (end 7 (shas %chess-notification eny.bowl))
+  =/  =action:hark  [%add-yarn & & id rope now.bowl body /[dap.bowl] ~]
+  =/  =cage  [%hark-action !>(action)]
+  `[%pass /hark %agent [our.bowl %hark] %poke cage]
 --
