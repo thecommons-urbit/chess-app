@@ -5,7 +5,7 @@
 ::
 ::  import libraries and expose namespace
 /-  *historic, hark
-/+  *chess, dbug, default-agent, pals
+/+  *chess, dbug, default-agent, pals, mark-warmers
 ::
 ::  define state structures
 |%
