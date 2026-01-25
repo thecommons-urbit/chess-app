@@ -653,6 +653,8 @@
                   %-  send-hark
                   :*  src.bowl
                       %challenge
+                      ?:  =(our.bowl white-player)
+                        ' has accepted your challenge - your move!'
                       ' has accepted your challenge'
                       bowl
                       `game-id.action
