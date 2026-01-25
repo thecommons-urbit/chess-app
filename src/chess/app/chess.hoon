@@ -588,14 +588,22 @@
           ?.  (~(has by challenges-sent) src.bowl)
             %+  poke-nack  this
             "{<our.bowl>} hasn't challenged you"
-          :-
-            ::  tell frontend our challenge was declined
-            :~  :*  %give
-                    %fact
-                    ~[/challenges]
-                    %chess-update
-                    !>([%challenge-resolved src.bowl])
-            ==  ==
+          :-  ;:  welp
+                  :~  :*  %give
+                          %fact
+                          ~[/challenges]
+                          %chess-update
+                          !>([%challenge-resolved src.bowl])
+                  ==  ==
+                  %-  drop
+                  %-  send-hark
+                  :*  src.bowl
+                      %challenge
+                      ' has declined your challenge'
+                      bowl
+                      ~
+                  ==
+              ==
           %=  this
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
@@ -625,21 +633,31 @@
                 ~
                 ~
             ==
-          :-
-            ::  add our new game to the list of active games
-            :~  :*  %give
-                    %fact
-                    ~[/active-games]
-                    %chess-game-active
-                    !>(new-game)
-                ==
-                ::  tell our frontend our challenge was accepted
-                :*  %give
-                    %fact
-                    ~[/challenges]
-                    %chess-update
-                    !>([%challenge-resolved src.bowl])
-            ==  ==
+          :-  ;:  welp
+                  ::  add our new game to the list of active games
+                  :~  :*  %give
+                          %fact
+                          ~[/active-games]
+                          %chess-game-active
+                          !>(new-game)
+                  ==  ==
+                  ::  tell subscribers our challenge was accepted
+                  :~  :*  %give
+                          %fact
+                          ~[/challenges]
+                          %chess-update
+                          !>([%challenge-resolved src.bowl])
+                  ==  ==
+                  ::  send challenge accepted notification
+                  %-  drop
+                  %-  send-hark
+                  :*  src.bowl
+                      %challenge
+                      ' has accepted your challenge'
+                      bowl
+                      `game-id.action
+                  ==
+              ==
           %=  this
             ::  remove our challenge from challenges-sent
             challenges-sent  (~(del by challenges-sent) src.bowl)
@@ -1000,7 +1018,26 @@
                           !>(archived-game)
                   ==  ==
                   ::  send notification
-                  ?.  =(result.archived-game ?([~ %'0-1'] [~ %'½–½']))
+                  ?~  move
+                    ::  no move - either resignation or draw acceptance
+                    %-  drop
+                    %-  send-hark
+                    :*  ?:  =(our.bowl white.archived-game)
+                          black.archived-game
+                        white.archived-game
+                        %result
+                        ?-  result.archived-game
+                          [~ %'½–½']    ' accepted your draw offer'
+                          [~ %'1-0']    ' has resigned'
+                          [~ %'0-1']    ' has resigned'
+                          ::  XX this should never happen
+                          ~             ' ended the game'
+                        ==
+                        bowl
+                        `game-id.archived-game
+                    ==
+                  ::  regular game ending notification (with move)
+                  ?.  =(result.archived-game ?([~ %'1-0'] [~ %'0-1'] [~ %'½–½']))
                     ~
                   %-  drop
                   %-  send-hark
@@ -1008,9 +1045,13 @@
                         black.archived-game
                       white.archived-game
                       %result
-                      ?:  =(result.archived-game [~ %'0-1'])
-                        ' wins'
-                      ' draw'
+                      ?-  result.archived-game
+                        [~ %'1-0']    ' wins'
+                        [~ %'0-1']    ' wins'
+                        [~ %'½–½']    ' draw'
+                        ::  XX this should never happen
+                        ~             ' ended the game'
+                      ==
                       bowl
                       `game-id.archived-game
                   ==
