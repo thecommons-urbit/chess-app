@@ -1,9 +1,9 @@
 :~
   title+'Chess'
   info+'Fully peer-to-peer chess over Urbit'
-  color+0xff.ffff
-  image+'https://peekabooo.icu/images/finmep-chess.svg'
+  color+0xf2.efe7
+  image+'/apps/chess/assets/tile-6DCwU_2z/svg'
   base+'chess'
-  version+[0 0 1]
+  version+[1 0 0]
   license+'GPL3'
   website+'https://github.com/thecommons-urbit/chess'

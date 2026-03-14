@@ -1,34 +1,40 @@
 /-  chess
 =,  format
-|_  act=chess-action:chess
+|_  act=chess-user-action:chess
 ++  grab
   |%
-  ++  noun  chess-action:chess
+  ++  noun  chess-user-action:chess
   ++  json
     |=  jon=^json
-    %-  chess-action:chess
-    =/  head  ((ot:dejs ~[[%chess-action so:dejs]]) jon)
+    %-  chess-user-action:chess
+    =/  head  ((ot:dejs ~[[%chess-user-action so:dejs]]) jon)
     ?+  head  ~|  'bad json for chess-action'  !!
-      %challenge
-        :-  %challenge
+      %send-challenge
+        :-  %send-challenge
         %.  jon
         %-  ot:dejs
         :~  [%who (se:dejs %p)]
             [%challenger-side so:dejs]
             [%event so:dejs]
-            [%round (su:dejs-soft (more dot dem))]
+            [%practice-game bo:dejs]
         ==
-      %accept-game
-        :-  %accept-game
+      %decline-challenge
+        :-  %decline-challenge
         %.  jon
         %-  ot:dejs
         :~  [%who (se:dejs %p)]
         ==
-      %decline-game
-        :-  %decline-game
+      %accept-challenge
+        :-  %accept-challenge
         %.  jon
         %-  ot:dejs
         :~  [%who (se:dejs %p)]
+        ==
+      %resign
+        :-  %resign
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
         ==
       %offer-draw
         :-  %offer-draw
@@ -36,8 +42,8 @@
         %-  ot:dejs
         :~  [%game-id (se:dejs %da)]
         ==
-      %accept-draw
-        :-  %accept-draw
+      %revoke-draw
+        :-  %revoke-draw
         %.  jon
         %-  ot:dejs
         :~  [%game-id (se:dejs %da)]
@@ -48,8 +54,44 @@
         %-  ot:dejs
         :~  [%game-id (se:dejs %da)]
         ==
-      %move
-        :-  %move
+      %accept-draw
+        :-  %accept-draw
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %claim-special-draw
+        :-  %claim-special-draw
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %request-undo
+        :-  %request-undo
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %revoke-undo
+        :-  %revoke-undo
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %decline-undo
+        :-  %decline-undo
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %accept-undo
+        :-  %accept-undo
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+        ==
+      %make-move
+        :-  %make-move
         =+  ^-  [game-id=@dau head=@tas]
         %.  jon
         %-  ot:dejs
@@ -84,13 +126,13 @@
             %-  ot:dejs
             :~  [%castle-side so:dejs]
             ==
-          %end
-            :-  game-id
-            :-  %end
-            %.  jon
-            %-  ot:dejs
-            :~  [%result so:dejs]
-            ==
+        ==
+      %change-special-draw-preference
+        :-  %change-special-draw-preference
+        %.  jon
+        %-  ot:dejs
+        :~  [%game-id (se:dejs %da)]
+            [%setting bo:dejs]
         ==
     ==
   --
