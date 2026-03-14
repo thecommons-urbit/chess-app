@@ -1595,9 +1595,14 @@
       ?+  -.sign  (on-agent:default wire sign)
           %poke-ack
         ::  we don't care if opponent acks/nacks; game is over and that's that
+        =/  =game-id  (slav %da i.t.t.wire)
+        ::  game may already be gone if this is a self-game
+        ?.  ?|  (~(has by games) game-id)
+                !=(~ (~(gut by potential-states) game-id ~))
+            ==
+          [~ this]
         =/  agent-state
           =*  result  i.t.t.t.t.wire
-          =/  =game-id  (slav %da i.t.t.wire)
           =+
             ^=  [game-state move]
             ^-  [active-game-state (unit card)]
